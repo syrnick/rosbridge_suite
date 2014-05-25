@@ -16,7 +16,9 @@ from std_msgs.msg import String, Int32
 class TestMultiUnregistering(unittest.TestCase):
 
     def setUp(self):
-        rospy.init_node("test_multi_unregistering")
+        rospy.init_node("test_multi_unregistering", log_level=rospy.DEBUG)
+        import logging
+        [logging.getLogger(l).setLevel(logging.DEBUG) for l in ["rospy","rospy.internal","rospy.core","rospy.tcpros"]]
 
     def test_publish_once(self):
         """ Make sure that publishing works """
@@ -44,17 +46,27 @@ class TestMultiUnregistering(unittest.TestCase):
 
         received = {"msg": None}
         def cb(msg):
+            rospy.loginfo("received")
+            rospy.loginfo(msg)
+            import traceback
+            for line in traceback.format_stack():
+                rospy.loginfo(line.strip())
             received["msg"] = msg
 
         rospy.Subscriber(topic, ros_loader.get_message_class(msg_type), cb)
+        rospy.loginfo("Subscribed")
         p = MultiPublisher(topic, msg_type)
+        rospy.loginfo("Publisher created")
         p.publish(msg)
+        rospy.loginfo("published")
 
         sleep(1)
 
         self.assertEqual(received["msg"].data, msg["data"])
 
         p.unregister()
+        rospy.loginfo("unregistered")
+
         # The publisher went away at time T. Here's the timeline of the events:
         # T+1 seconds - the subscriber will retry to reconnect - fail
         # T+3 seconds - the subscriber will retry to reconnect - fail
@@ -69,12 +81,15 @@ class TestMultiUnregistering(unittest.TestCase):
         received["msg"] = None
         self.assertIsNone(received["msg"])
         p = MultiPublisher(topic, msg_type)
+        rospy.loginfo("Publisher created")
         p.publish(msg)
+        rospy.loginfo("published 2")
 
         self.assertIsNone(received["msg"])
 
         sleep(3)
         p.publish(msg)
+        rospy.loginfo("published 3")
         sleep(2)
         # Next two lines should be removed when this is fixed:
         # https://github.com/ros/ros_comm/blob/indigo-devel/clients/rospy/src/rospy/impl/tcpros_base.py#L733

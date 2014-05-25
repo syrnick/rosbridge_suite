@@ -1,0 +1,3 @@
+<launch>
+  <test test-name="test_multi_unregistering" pkg="rosbridge_library" type="test_multi_unregistering.py" />
+</launch>
